@@ -1,0 +1,10 @@
+fastapi>=0.104.0
+uvicorn[standard]
+pybit>=5.8.0
+websocket-client
+python-dotenv
+pandas
+numpy
+matplotlib
+scipy
+sqlalchemy

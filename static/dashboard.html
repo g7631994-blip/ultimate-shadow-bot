@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ULTIMATE SHADOW BOT CORE</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #00ff88; margin: 20px; }
+        .card { background: #1a1a1a; border: 1px solid #00ff88; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #00ff88; padding: 6px; text-align: left; }
+        .profit { color: #00ff00; }
+        .loss { color: #ff3333; }
+    </style>
+</head>
+<body>
+    <h1>⚡ ULTIMATE SHADOW BOT CORE</h1>
+    <div class="card">
+        <h2>Estado</h2>
+        <p>Equity: $<span id="equity">0</span> | P&L diario: $<span id="pnl">0</span> | Posiciones: <span id="positions">0</span></p>
+        <p>Kill Switch: <span id="kill">-</span></p>
+    </div>
+    <div class="card">
+        <canvas id="equityChart" height="100"></canvas>
+    </div>
+    <div class="card">
+        <h2>Últimos trades</h2>
+        <table id="tradesTable">
+            <tr><th>Hora</th><th>Símbolo</th><th>Estrategia</th><th>Lado</th><th>P&L</th><th>Estado</th></tr>
+        </table>
+    </div>
+    <script>
+        async function fetchStatus() {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            document.getElementById('equity').textContent = data.equity.toFixed(2);
+            document.getElementById('pnl').textContent = data.daily_pnl.toFixed(2);
+            document.getElementById('positions').textContent = data.open_positions;
+            document.getElementById('kill').textContent = data.kill_switch ? 'ACTIVO' : 'Normal';
+        }
+        async function fetchTrades() {
+            const res = await fetch('/api/trades?limit=20');
+            const trades = await res.json();
+            const table = document.getElementById('tradesTable');
+            table.innerHTML = '<tr><th>Hora</th><th>Símbolo</th><th>Estrategia</th><th>Lado</th><th>P&L</th><th>Estado</th></tr>';
+            trades.forEach(t => {
+                const pnlClass = t.pnl >= 0 ? 'profit' : 'loss';
+                table.insertAdjacentHTML('beforeend', 
+                    `<tr><td>${new Date(t.entry_time).toLocaleTimeString()}</td><td>${t.symbol}</td><td>${t.strategy}</td><td>${t.side}</td><td class="${pnlClass}">${t.pnl.toFixed(4)}</td><td>${t.status}</td></tr>`
+                );
+            });
+        }
+        async function fetchEquityHistory() {
+            const res = await fetch('/api/equity_history?hours=6');
+            const data = await res.json();
+            return { labels: data.map(d => new Date(d.t).toLocaleTimeString()), values: data.map(d => d.equity) };
+        }
+        async function updateChart() {
+            const { labels, values } = await fetchEquityHistory();
+            if (window.myChart) {
+                window.myChart.data.labels = labels;
+                window.myChart.data.datasets[0].data = values;
+                window.myChart.update();
+            }
+        }
+        window.onload = async () => {
+            const ctx = document.getElementById('equityChart').getContext('2d');
+            const init = await fetchEquityHistory();
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: init.labels, datasets: [{ label: 'Equity ($)', data: init.values, borderColor: '#00ff88', backgroundColor: 'rgba(0,255,136,0.1)', fill: true, tension: 0.3 }] },
+                options: { responsive: true, scales: { x: { display: false }, y: { beginAtZero: false } } }
+            });
+            setInterval(() => { fetchStatus(); fetchTrades(); updateChart(); }, 5000);
+            fetchStatus(); fetchTrades();
+        };
+    </script>
+</body>
+</html>

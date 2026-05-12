@@ -1,0 +1,17 @@
+name: Generar proyecto desde setup.sh
+on:
+  push:  # se ejecuta cada vez que subas algo
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ejecutar setup.sh
+        run: bash setup.sh
+      - name: Commit de archivos generados
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Archivos generados automáticamente" || echo "Nada que commitear"
+          git push

@@ -1,17 +1,23 @@
 name: Generar proyecto desde setup.sh
 on:
-  push:  # se ejecuta cada vez que subas algo
+  push:
+    paths:
+      - "setup.sh"   # solo se ejecuta si cambia setup.sh
+  workflow_dispatch:  # permite ejecutarlo manualmente desde la web
 jobs:
   generate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # necesario para hacer git push
     steps:
       - uses: actions/checkout@v4
       - name: Ejecutar setup.sh
-        run: bash setup.sh
-      - name: Commit de archivos generados
+        run: |
+          chmod +x setup.sh
+          bash setup.sh
+      - name: Commit y push de archivos generados
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add .
-          git commit -m "Archivos generados automáticamente" || echo "Nada que commitear"
-          git push
+          git diff --staged --quiet || (git commit -m "Archivos generados automáticamente" && git push)
